@@ -1679,8 +1679,17 @@
             renderGifts(type);
         }
 
+        const RESET_PASSWORD = "HotteMarty2026";
+
         function resetReservations() {
-            if (confirm("Réinitialiser toutes les quêtes de la hotte ?")) {
+            const entered = prompt("🔒 Entrez le mot de passe pour réinitialiser la hotte :");
+            if (entered === null) return;
+            if (entered !== RESET_PASSWORD) {
+                playNegationSound();
+                alert("❌ Mot de passe incorrect. Réinitialisation annulée.");
+                return;
+            }
+            if (confirm("Mot de passe validé ✅. Réinitialiser toutes les quêtes de la hotte ?")) {
                 reservations = {};
                 persistReservations();
                 renderGifts(currentFilter);
