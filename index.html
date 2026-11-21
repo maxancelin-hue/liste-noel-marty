@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCADE NOEL • La Liste de Marty</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --arcade-bg: #090314;
+            --arcade-panel: #180d35;
+            --arcade-red: #ff2a6d;
+            --arcade-green: #05ffa1;
+            --arcade-yellow: #ffb800;
+            --arcade-border: #8b5cf6;
+            --arcade-blue: #38bdf8;
+            --zelda-gold: #fbbf24;
+            --parchment-bg: #fef3c7;
+            --parchment-border: #92400e;
+            --parchment-text: #78350f;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        body { 
+            background: var(--arcade-bg);
+            background-image: 
+                radial-gradient(circle at 50% 0%, #291157 0%, transparent 60%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 100%, 100% 4px, 6px 100%;
+            color: white; 
+            min-height: 100vh; 
+            padding: 15px; 
+            overflow-x: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Flocons pixels animés */
+        .snowflake {
+            position: fixed;
+            top: -10px;
+            background: #ffffff;
+            border-radius: 0px;
+            pointer-events: none;
+            animation: fall linear infinite;
+            z-index: 999;
+            box-shadow: 0 0 6px #ffffff;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-10px) translateX(0); }
+            50% { transform: translateY(50vh) translateX(10px); }
+            100% { transform: translateY(105vh) translateX(-10px); }
+        }
+
+        /* PROJECTILES LANCÉS PAR LES MASCOTTES */
+        .mascot-projectile {
+            position: fixed;
+            font-size: 1.8rem;
+            z-index: 998;
+            pointer-events: none;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.2s ease;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.8));
+        }
+
+        /* ÉCRAN TV PRINCIPAL (CONTENEUR UNIQUE UNIFIÉ) */
+        .arcade-cabinet-master-screen {
+            background: var(--arcade-panel);
+            border: 5px solid var(--arcade-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 900px;
+            min-height: 560px;
+            margin: 10px auto 20px auto;
+            padding: 30px;
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 35px rgba(0, 0, 0, 0.7);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+        
+        .arcade-cabinet-master-screen::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
+            z-index: 5;
+            pointer-events: none;
+            border-radius: 15px;
+        }
+
+        /* MODAL DE PRÉVISUALISATION ARCADE */
+        .arcade-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(9, 3, 20, 0.85);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+            animation: fadeInModal 0.2s ease-in-out;
+        }
+        .arcade-modal-overlay.active { display: flex; }
+        @keyframes fadeInModal { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+
+        .arcade-modal-box {
+            background: var(--arcade-panel);
+            border: 4px solid var(--arcade-yellow);
+            border-radius: 16px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 184, 0, 0.4), inset 0 0 30px rgba(139, 92, 246, 0.3);
+            position: relative;
+            z-index: 2001;
+        }
+        .arcade-modal-header {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.75rem;
+            color: var(--arcade-yellow);
+            margin-bottom: 15px;
+            text-shadow: 0 0 8px rgba(255, 184, 0, 0.6);
+        }
+        .arcade-modal-img-container {
+            width: 100%;
+            height: 240px;
+            background: #ffffff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 15px;
+            border: 3px ridge var(--arcade-border);
+        }
+        .arcade-modal-img-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            padding: 10px;
+        }
+        .arcade-modal-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 8px;
+        }
+        .arcade-modal-price {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.8rem;
+            color: var(--arcade-green);
+            margin-bottom: 20px;
+        }
+        .arcade-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-modal-action {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.55rem;
+            font-weight: 800;
+            cursor: pointer;
+            border: 2px solid white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: 0.1s;
+        }
+        .btn-modal-visit { background: #3b82f6; color: white; border-color: #93c5fd; box-shadow: 0 4px 0 #1e3a8a; }
+        .btn-modal-visit:hover { background: #2563eb; }
+        .btn-modal-close { background: #ef4444; color: white; border-color: #fca5a5; box-shadow: 0 4px 0 #991b1b; }
+        .btn-modal-close:hover { background: #dc2626; }
+
+        /* ÉCRANS STYLE PARCHEMIN (ESPRIT & LETTRE) */
+        .parchment-screen-view {
+            background: var(--parchment-bg);
+            border: 5px ridge var(--parchment-border);
+            color: var(--parchment-text);
+            border-radius: 12px;
+            padding: 22px 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 0 0 30px rgba(146, 64, 14, 0.15);
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        /* STYLE UNIFIÉ DES TITRES */
+        .arcade-screen-header {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.85rem;
+            color: var(--arcade-yellow);
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(255, 184, 0, 0.5);
+            text-align: center;
+        }
+
+        .letter-slide {
+            display: none;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.52rem;
+            line-height: 2.2;
+            font-weight: 700;
+            text-align: left;
+            color: var(--parchment-text);
+            width: 100%;
+        }
+        .letter-slide.active-slide { display: block; }
+        
+        .arcade-gallery-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            border-top: 2px dashed rgba(146, 64, 14, 0.3);
+            padding-top: 10px;
+            margin-top: 8px;
+        }
+        .btn-gallery-nav {
+            background: #fffbeb;
+            border: 3px solid var(--parchment-border);
+            color: var(--parchment-text);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.46rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #b45309;
+            transition: all 0.1s ease;
+        }
+        .btn-gallery-nav:hover { background: #fef08a; transform: translateY(-2px); box-shadow: 0 6px 0 #b45309; }
+        .btn-gallery-nav:active { transform: translateY(2px); box-shadow: 0 2px 0 #b45309; }
+        
+        .gallery-counter {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.55rem;
+            color: var(--parchment-border);
+        }
+
+        .home-actions-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 15px 0 5px 0;
+        }
+
+        @keyframes textFlash { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .btn-arcade-start {
+            background: rgba(5, 255, 161, 0.12);
+            border: 2px solid var(--arcade-green);
+            color: var(--arcade-green);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 12px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(5, 255, 161, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        .btn-arcade-start span { animation: textFlash 1.4s infinite; }
+        .btn-arcade-start:hover {
+            background: var(--arcade-green);
+            color: #022c22;
+            transform: scale(1.05);
+            box-shadow: 0 0 25px var(--arcade-green);
+        }
+        .btn-arcade-start:hover span { animation: none; opacity: 1; }
+
+        .btn-arcade-cheat {
+            background: rgba(255, 42, 109, 0.12);
+            border: 2px solid var(--arcade-red);
+            color: var(--arcade-red);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 12px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(255, 42, 109, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        .btn-arcade-cheat span { animation: textFlash 1.4s infinite; }
+        .btn-arcade-cheat:hover {
+            background: var(--arcade-red);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 0 25px var(--arcade-red);
+        }
+        .btn-arcade-cheat:hover span { animation: none; opacity: 1; }
+
+        /* MASCOTTES INTERACTIVES */
+        .interactive-mascot {
+            position: fixed;
+            z-index: 1000;
+            text-align: center;
+            cursor: pointer;
+            transition: left 2.5s cubic-bezier(0.25, 1, 0.5, 1), top 2.5s cubic-bezier(0.25, 1, 0.5, 1), transform 0.2s, filter 0.3s, opacity 0.5s;
+            user-select: none;
+        }
+        .interactive-mascot:hover { transform: scale(1.15); }
+        .mascot-sprite { 
+            font-size: 2.8rem; 
+            display: block; 
+            animation: mascotWobble 1s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.6));
+        }
+        @keyframes mascotWobble {
+            0% { transform: rotate(-8deg); }
+            100% { transform: rotate(8deg); }
+        }
+
+        .mascot-bubble {
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            background: #ffffff;
+            color: #090314;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            pointer-events: none;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1001;
+        }
+        .mascot-bubble.show { transform: translateX(-50%) scale(1); }
+
+        .arcade-page { display: none; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; flex-grow: 1; animation: glitchFade 0.3s ease-in-out; position: relative; z-index: 6; }
+        .arcade-page.active { display: flex; }
+        @keyframes glitchFade { 0% { opacity: 0; transform: scale(0.99); } 100% { opacity: 1; transform: scale(1); } }
+
+        .arcade-nav {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; position: relative; z-index: 10; flex-wrap: wrap;
+        }
+        .nav-coin-btn {
+            background: linear-gradient(145deg, #2a1b4e, #140b2a); border: 3px solid #8b5cf6; color: #ffffff;
+            padding: 10px 14px; border-radius: 35px; cursor: pointer; font-family: 'Press Start 2P', monospace;
+            font-size: 0.4rem; text-transform: uppercase; transition: all 0.1s ease; box-shadow: 0 6px 0 #3b0764;
+            position: relative; top: 0; display: flex; align-items: center; gap: 5px;
+        }
+        .nav-coin-btn.locked-step { opacity: 0.35; filter: grayscale(100%); cursor: not-allowed; box-shadow: 0 3px 0 #111; pointer-events: none; }
+        .nav-coin-btn:hover:not(.locked-step) { transform: translateY(-2px); box-shadow: 0 8px 0 #3b0764; }
+        
+        #nav-btn-1.active { background: linear-gradient(145deg, #ff2a6d, #b91c1c); border-color: #fca5a5; box-shadow: 0 5px 0 #881337; }
+        #nav-btn-2.active { background: linear-gradient(145deg, #b45309, #78350f); border-color: #fef08a; box-shadow: 0 5px 0 #451a03; }
+        #nav-btn-3.active { background: linear-gradient(145deg, #9333ea, #581c87); border-color: #e9d5ff; box-shadow: 0 5px 0 #3b0764; }
+        #nav-btn-4.active { background: linear-gradient(145deg, #f59e0b, #b45309); border-color: #fef08a; box-shadow: 0 5px 0 #78350f; }
+        #nav-btn-5.active { background: linear-gradient(145deg, #05ffa1, #047857); border-color: #a7f3d0; color: #022c22; font-weight: 800; box-shadow: 0 5px 0 #064e3b; }
+
+        #bgm-toggle-btn { background: linear-gradient(145deg, #1e293b, #0f172a); border-color: #64748b; color: #cbd5e1; box-shadow: 0 6px 0 #0f172a; pointer-events: auto !important; opacity: 1 !important; filter: none !important; }
+        #bgm-toggle-btn.playing { background: linear-gradient(145deg, #0284c7, #0369a1); border-color: #38bdf8; color: white; box-shadow: 0 5px 0 #034871; }
+
+        .title-screen {
+            text-align: center;
+            margin: auto;
+            padding: 20px;
+        }
+        .pixel-title {
+            font-family: 'Press Start 2P', monospace; font-size: 2rem; color: #ffffff;
+            text-shadow: 4px 4px 0px var(--arcade-red), 8px 8px 0px #3b0764; line-height: 1.5; margin-bottom: 20px;
+        }
+
+        /* STYLE BOOMER 2000 */
+        .boomer-body { background-color: #000000 !important; background-image: none !important; color: #00FF00 !important; font-family: "Times New Roman", Times, serif !important; padding: 10px; }
+        .boomer-container { border: 4px ridge #FF00FF; background-color: #000080; color: #FFFFFF; padding: 15px; max-width: 900px; margin: 0 auto; }
+        .boomer-table { width: 100%; border-collapse: collapse; border: 3px inset #C0C0C0; background-color: #FFFFFF; color: #000000; margin-top: 10px; }
+        .boomer-table th { background-color: #C0C0C0; color: #000080; border: 2px outset #C0C0C0; padding: 6px; font-size: 0.85rem; font-family: Arial, sans-serif; }
+        .boomer-table td { border: 1px solid #808080; padding: 6px; font-size: 0.8rem; font-family: Arial, sans-serif; }
+        .boomer-table tr:nth-child(even) { background-color: #E0E0E0; }
+        .boomer-input { border: 2px inset #808080; padding: 3px; font-size: 0.75rem; width: 100%; background: #FFFFCC; }
+        .boomer-btn { background-color: #C0C0C0; border: 2px outset #FFFFFF; color: #000000; font-weight: bold; padding: 3px 6px; cursor: pointer; font-size: 0.75rem; }
+        .boomer-btn:active { border-style: inset; }
+
+        /* STATION BUDGET */
+        .cabinet-title {
+            font-family: 'Press Start 2P', monospace; font-size: 0.9rem; color: var(--arcade-yellow); margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 184, 0, 0.5); text-align: center;
+        }
+        .token-counter {
+            font-family: 'Press Start 2P', monospace; font-size: 1.6rem; color: var(--arcade-green); margin: 10px 0 15px 0;
+            text-shadow: 0 0 15px rgba(5, 255, 161, 0.7); background: rgba(0, 0, 0, 0.4); padding: 12px; border-radius: 10px;
+            border: 2px dashed var(--arcade-green); text-align: center;
+        }
+        
+        .clicker-buttons-group { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        
+        .btn-arcade-coin {
+            background: linear-gradient(135deg, #ffb800, #d97706); color: #ffffff; border: 2px solid white; padding: 10px 14px;
+            font-family: 'Press Start 2P', monospace; font-size: 0.58rem; font-weight: 800; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 4px 0 #78350f, 0 0 12px rgba(255, 184, 0, 0.4); transition: 0.1s;
+        }
+        .btn-arcade-coin:active { transform: translateY(3px); box-shadow: 0 1px 0 #78350f; }
+        .btn-coin-5 { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 4px 0 #1e3a8a; }
+        .btn-coin-10 { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 0 #064e3b; }
+        
+        .btn-arcade-deduct {
+            background: linear-gradient(135deg, #ef4444, #991b1b); color: #ffffff; border: 2px solid #fca5a5; padding: 10px 14px;
+            font-family: 'Press Start 2P', monospace; font-size: 0.58rem; font-weight: 800; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 4px 0 #7f1d1d, 0 0 12px rgba(239, 68, 68, 0.4); transition: 0.1s;
+        }
+        .btn-arcade-deduct:active { transform: translateY(3px); box-shadow: 0 1px 0 #7f1d1d; }
+
+        @keyframes hotteUnlockPulse {
+            0% { transform: scale(1); border-color: rgba(255,255,255,0.3); box-shadow: 0 0 0 rgba(5,255,161,0); }
+            50% { transform: scale(1.05); border-color: var(--arcade-green); box-shadow: 0 0 20px var(--arcade-green); background: rgba(5,255,161,0.2); }
+            100% { transform: scale(1); border-color: var(--arcade-border); box-shadow: 0 0 10px rgba(5,255,161,0.4); }
+        }
+        .stage-btn.just-unlocked { animation: hotteUnlockPulse 0.8s ease-in-out; }
+
+        @keyframes textFlashGreen { 0%, 100% { opacity: 1; color: var(--arcade-green); } 50% { opacity: 0.5; color: #ffffff; } }
+        .stage-btn.unlocked-ready h4 { animation: textFlashGreen 1.5s infinite; }
+
+        .stage-select-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 15px; }
+        .stage-btn {
+            background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 12px;
+            padding: 15px; cursor: pointer; text-align: center; transition: 0.2s;
+        }
+        .stage-btn:hover:not(.locked) { background: rgba(5, 255, 161, 0.2); border-color: var(--arcade-green); transform: translateY(-3px); }
+        .stage-btn.locked { opacity: 0.5; border-style: dashed; cursor: not-allowed; background: rgba(0, 0, 0, 0.4); }
+        .stage-btn h4 { font-family: 'Press Start 2P', monospace; font-size: 0.65rem; color: #ffffff; margin-bottom: 6px; }
+        .stage-btn p { font-size: 0.8rem; color: #e2e8f0; font-weight: 600; }
+
+        /* CATALOGUE & HOTTE */
+        .header-arcade-title { font-family: 'Press Start 2P', monospace; font-size: 1.2rem; color: #ffffff; text-shadow: 2px 2px 0px var(--arcade-red); margin-bottom: 8px; text-align: center; }
+        
+        .arcade-loot-bag {
+            background: rgba(24, 13, 53, 0.95); border: 2px solid var(--arcade-green); border-radius: 14px;
+            padding: 10px 18px; max-width: 450px; margin: 10px auto; display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 0 20px rgba(5, 255, 161, 0.3);
+        }
+        .loot-icon { font-size: 2rem; transition: transform 0.3s; }
+        .loot-text h4 { font-family: 'Press Start 2P', monospace; font-size: 0.58rem; color: var(--arcade-green); margin-bottom: 3px; }
+        .loot-text p { font-size: 0.8rem; color: #ffffff; font-weight: 600; }
+
+        .filters { display: flex; justify-content: center; gap: 6px; margin-bottom: 15px; flex-wrap: wrap; }
+        .filter-btn { 
+            background: var(--arcade-panel); border: 1px solid var(--arcade-border); color: white; padding: 6px 12px; 
+            border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 700; transition: 0.2s; 
+        }
+        .filter-btn.active, .filter-btn:hover { background: var(--arcade-red); border-color: white; }
+
+        .action-btn-group { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .admin-toggle { background: #065f46; border: 1px solid var(--arcade-green); color: white; font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+        .reset-data { background: transparent; border: 1px dashed rgba(255,255,255,0.4); color: #cbd5e1; font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+        .parent-panel {
+            background: var(--arcade-panel); border: 2px solid var(--arcade-yellow);
+            border-radius: 14px; padding: 15px; display: none; text-align: left; margin-bottom: 15px;
+        }
+        .parent-panel h3 { font-family: 'Press Start 2P', monospace; font-size: 0.75rem; color: var(--arcade-yellow); margin-bottom: 8px; }
+        .parent-list-item { background: rgba(255,255,255,0.06); padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 600; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; max-height: 480px; overflow-y: auto; padding-right: 5px; }
+        .grid::-webkit-scrollbar { width: 6px; }
+        .grid::-webkit-scrollbar-thumb { background: var(--arcade-border); border-radius: 4px; }
+
+        .card { 
+            background: #11082c; color: white; border-radius: 12px; overflow: hidden; border: 2px solid var(--arcade-border); 
+            transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5); border-color: #ffffff; }
+        .card.reserved { opacity: 0.7; border-color: var(--arcade-green); }
+        
+        .badge-category { position: absolute; top: 8px; left: 8px; background: #0f172a; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; z-index: 2; }
+        .badge-price { position: absolute; top: 8px; right: 8px; background: var(--arcade-red); color: #ffffff; border: 2px solid #ffffff; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; z-index: 2; text-align: right; line-height: 1.2; }
+
+        .img-container { width: 100%; height: 160px; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border-bottom: 1px solid rgba(255,255,255,0.15); cursor: pointer; }
+        .img-container img { width: 100%; height: 100%; object-fit: contain; padding: 10px; transition: transform 0.3s; }
+        .card:hover .img-container img { transform: scale(1.05); }
+
+        .card-content { padding: 14px; display: flex; flex-direction: column; flex-grow: 1; justify-content: space-between; }
+        .card h3 { font-size: 0.85rem; margin-bottom: 4px; font-weight: 800; color: #ffffff; text-transform: uppercase; }
+        .card-desc { font-size: 0.75rem; color: #cbd5e1; margin-bottom: 8px; font-style: italic; }
+        .site-badge { display: inline-block; font-size: 0.65rem; background: rgba(255,255,255,0.12); color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-bottom: 8px; }
+
+        .reservation-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px; margin-top: 4px; }
+        .form-row { margin-bottom: 4px; }
+        .form-input { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 6px 8px; color: white; font-size: 0.75rem; font-weight: 600; outline: none; }
+        .form-input:focus { border-color: var(--arcade-green); }
+        .form-input::placeholder { color: #cbd5e1; font-weight: 400; }
+        .card-actions-row { display: flex; gap: 6px; margin-top: 4px; }
+        .btn-action { flex: 1; padding: 6px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; border: none; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .btn-buy-link { background: rgba(255,255,255,0.15); color: white; }
+        .btn-submit-res { background: var(--arcade-green); color: #022c22; font-weight: 800; }
+        .card.reserved .reservation-box { background: rgba(5, 255, 161, 0.15); border-color: var(--arcade-green); text-align: center; padding: 8px; }
+        .reserved-details { font-size: 0.75rem; color: var(--arcade-green); font-weight: 800; margin-bottom: 4px; }
+        .btn-cancel-res { background: rgba(255, 42, 109, 0.25); color: #fecdd3; border: 1px solid var(--arcade-red); width: 100%; padding: 4px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; font-weight: 700; }
+
+        .star-particle { position: absolute; pointer-events: none; animation: burst 0.8s ease-out forwards; font-size: 1.2rem; z-index: 10; }
+        @keyframes burst {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; }
+        }
+
+        @media(max-width: 600px) { .pixel-title { font-size: 1.4rem; } .arcade-cabinet-master-screen { min-height: 600px; padding: 15px; } }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+</head>
+<body id="mainBody">
+
+    <!-- MODAL DE PRÉVISUALISATION ARCADE -->
+    <div class="arcade-modal-overlay" id="previewModal" onclick="closePreviewModal(event)">
+        <div class="arcade-modal-box" onclick="event.stopPropagation()">
+            <div class="arcade-modal-header" id="modalHeader">🔍 APERÇU DU CADEAU</div>
+            <div class="arcade-modal-img-container" id="modalImgContainer">
+                <img id="modalImg" src="" alt="Aperçu">
+            </div>
+            <div class="arcade-modal-title" id="modalTitle">Nom du cadeau</div>
+            <div class="arcade-modal-price" id="modalPrice">0.00 $</div>
+            <div class="arcade-modal-buttons">
+                <a id="modalLinkBtn" href="#" target="_blank" class="btn-modal-action btn-modal-visit">🌐 Voir l'offre</a>
+                <button class="btn-modal-action btn-modal-close" onclick="closePreviewModal()">✖ Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SNOW-BOT (Écran 1 & 4) -->
+    <div class="interactive-mascot" id="snowBot" onclick="onMascotClicked('snowBot', ['⛄ Brrrr !', '⛄ Ne me clique pas trop !', '⛄ Je rougis ! 😡', '⛄ Aïe !', '⛄ Je fonds... 💧'], '❄️')">
+        <div class="mascot-bubble" id="snowBotBubble">Clique sur moi ! ⛄</div>
+        <span class="mascot-sprite">⛄</span>
+    </div>
+
+    <!-- RENNE CACAS (Écran 2 / Explications) -->
+    <div class="interactive-mascot" id="reindeerMascot" style="display: none;" onclick="onMascotClicked('reindeerMascot', ['🦌 Oh non pas encore !', '🦌 Pouët ! 💩', '🦌 Arrête ça ! 😤', '🦌 Beurk !', '🦌 Je disparais... 💨'], '💩')">
+        <div class="mascot-bubble" id="reindeerBubble">Touche mon p'tit cadeau ! 🦌</div>
+        <span class="mascot-sprite">🦌</span>
+    </div>
+
+    <!-- PÈRE NOËL CADEAUX (Écran 5 / Hotte) -->
+    <div class="interactive-mascot" id="santaMascot" style="display: none;" onclick="onMascotClicked('santaMascot', ['🎅 Ho ho ho !', '🎅 Joyeux Noël ! 🎁', '🎅 Tu m\'énerves ! 😡', '🎅 Aïe la hotte !', '🎅 Disparition magique ! ✨'], '🎁')">
+        <div class="mascot-bubble" id="santaBubble">Ho ho ho ! 🎅</div>
+        <span class="mascot-sprite">🎅</span>
+    </div>
+
+    <!-- NAVIGATION LINÉAIRE (5 ÉTAPES) -->
+    <div id="navContainer" style="max-width: 900px; width: 100%; text-align: center; padding-top: 5px; position: relative; z-index: 10;">
+        <div class="arcade-nav">
+            <button class="nav-coin-btn active" onclick="goToScreen(1)" id="nav-btn-1">🔴 1. JOUER</button>
+            <button class="nav-coin-btn locked-step" onclick="goToScreen(2)" id="nav-btn-2">📜 2. Règle du jeu</button>
+            <button class="nav-coin-btn locked-step" onclick="goToScreen(3)" id="nav-btn-3">✉️ 3. Lettre</button>
+            <button class="nav-coin-btn locked-step" onclick="goToScreen(4)" id="nav-btn-4">🟡 4. Budget</button>
+            <button class="nav-coin-btn locked-step" onclick="goToScreen(5)" id="nav-btn-5">🟢 5. Hotte</button>
+            <button class="nav-coin-btn playing" onclick="toggleBgm()" id="bgm-toggle-btn">🔊 Musique</button>
+        </div>
+    </div>
+
+    <!-- ÉCRAN TV MASTER UNIQUE -->
+    <div class="arcade-cabinet-master-screen" id="masterTvScreen">
+
+        <!-- ================= ÉCRAN 1 : ÉCRAN TITRE ================= -->
+        <div class="arcade-page active" id="screen-1">
+            <div class="title-screen">
+                <h1 class="pixel-title">LA LISTE MAGIQUE<br>DE MARTY</h1>
+                
+                <div style="font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--arcade-green); margin-bottom: 25px; line-height: 1.6;">
+                    Bienvenue dans l'aventure interactive pour découvrir la liste de Noël de Marty ! 🎄🕹️✨
+                </div>
+                
+                <div class="home-actions-group">
+                    <button class="btn-arcade-start" onclick="unlockNextScreen(2)"><span>▶ Commencer l'Aventure</span></button>
+                    <button class="btn-arcade-cheat" onclick="goToScreen('boomer')"><span>🚨 Flemme de jouer, voir la liste</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ÉCRAN 2 : RÈGLE DU JEU ================= -->
+        <div class="arcade-page" id="screen-2">
+            <div class="arcade-screen-header">✨ RÈGLE DU JEU ✨</div>
+            <div class="parchment-screen-view" style="display: flex; flex-direction: column; justify-content: center; text-align: left; padding: 25px;">
+                <p style="font-family: 'Press Start 2P', monospace; font-size: 0.54rem; line-height: 2.1; font-weight: 700; color: var(--parchment-text);">
+                    HO HO HO ! 🎅 CHERS VISITEURS ET AVENTURIERS,<br><br>
+                    LE PÈRE NOËL A BIEN REÇU LA LONGUE LISTE DE VŒUX DE MARTY 🎁... MAIS AVOUONS-LE, ENTRE LA FABRICATION DES JOUETS À L'ATELIER ET LA DURE RÉALITÉ, LE PÈRE NOËL NE PEUT PAS TOUT ACHETER SEUL ! 🎄❄️<br><br>
+                    SURTOUT, RASSUREZ-VOUS : AUCUNE OBLIGATION ICI ! CHACUN EST ENTIÈREMENT LIBRE SELON SES MOYENS ET SES ENVIES ⭐.<br><br>
+                    VOUS POUVEZ CHOISIR D'OFFRIR UN ARTICLE, DE PARTICIPER À LA CAGNOTTE LIBRE, OU TOUT SIMPLEMENT DE NAVIGUER DANS L'AVENTURE ! 🎮🚀
+                </p>
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;">
+                <button class="btn-arcade-cheat" onclick="goToScreen(1)" style="font-size: 0.5rem; padding: 8px 14px;">⬅️ RETOUR</button>
+                <button class="btn-arcade-start" onclick="unlockNextScreen(3)" style="font-size: 0.55rem; padding: 10px 16px;"><span>▶ VOIR LA LETTRE ➔</span></button>
+            </div>
+        </div>
+
+        <!-- ================= ÉCRAN 3 : LA LETTRE DE MARTY & LISTE ÉLARGIE INTÉGRÉE ================= -->
+        <div class="arcade-page" id="screen-3">
+            <div class="arcade-screen-header">📜 LA LETTRE DE MARTY & PHOTOS</div>
+            
+            <div class="parchment-screen-view">
+                <!-- Slide 1 : Texte Partie 1 enrichi -->
+                <div class="letter-slide active-slide" id="slide-1">
+                    CHER PÈRE NOËL 🎅,<br><br>
+                    CETTE ANNÉE J'AI ÉTÉ BIEN SAGE (OU PRESQUE UN TOUT PETIT PEU ! 😇). DANS MA CHAMBRE, J'AI PRÉPARÉ MON ATELIER SECRET ET J'AI CLASSÉ TOUS MES JEUX ET MES ENVIES AVEC BEAUCOUP D'ATTENTION ET DE SOIN 🌟.<br><br>
+                    J'ESPÈRE QUE TU TROOVERAS CETTE BORNE DE JEU INCROYABLE ET COOL POUR VENIR VOIR MA LISTE DE NOËL 🕹️🎄 !
+                </div>
+                <!-- Slide 2 : Texte Partie 2 enrichi -->
+                <div class="letter-slide" id="slide-2">
+                    DANS MA LISTE DE RÊVE CETTE ANNÉE 🎁, IL Y A DES LEGO DE L'ESPACE 🚀 POUR VOYAGER DANS LES ÉTOILES, DES JEUX DE SOCIÉTÉ DRÔLES POUR RIGOLER AVEC TOUTE LA FAMILLE 🎲, DES VOITURES TÉLÉCOMMANDÉES QUI FILENT COMME L'ÉCLAIR 🏎️ ET DES TRUCS MAGIQUES 🌟.<br><br>
+                    J'AI DÉJÀ TROP HÂTE DE VOIR TOUTES LES SURPRISES QUI SERONT CACHÉES SOUS LE SAPIN DE NOËL 🌲 !
+                </div>
+                <!-- Slide 3 : Texte Partie 3 enrichi -->
+                <div class="letter-slide" id="slide-3">
+                    MERCI INFINIMENT POUR TOUT CE QUE TU FAIS AVEC TES GENTILS LUTINS 🧝 ET POUR TOUTES LES FAMILLES DU MONDE ENTIER 🌍.<br><br>
+                    PASSE DE JOYEUSES FÊTES AVEC TES RENNES 🦌 ET DIS-LEUR BONJOUR DE MA PART !<br><br>
+                    GROS BISOUS MAGIQUES ❤️,<br>
+                    — MARTY 🎮🎄✨
+                </div>
+                <!-- Slide 4 : Liste Miniature des Cadeaux de Marty avec Grands Visuels -->
+                <div class="letter-slide" id="slide-4" style="text-align: left; height: 100%; overflow-y: auto; max-height: 230px; padding-right: 5px;">
+                    <div style="font-family: 'Press Start 2P', monospace; font-size: 0.5rem; margin-bottom: 10px; color: var(--parchment-border); text-align: center;">🎁 MA LISTE DE RÊVE (AVEC LES GRANDS VISUELS) :</div>
+                    <div id="letterMiniListContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+
+                <div class="arcade-gallery-nav">
+                    <button class="btn-gallery-nav" onclick="changeLetterSlide(-1)">◀ PRÉCÉDENT</button>
+                    <div class="gallery-counter" id="slideCounter">PAGE 1 / 4</div>
+                    <button class="btn-gallery-nav" onclick="changeLetterSlide(1)">SUIVANT ▶</button>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 10px;">
+                <button class="btn-arcade-start" onclick="unlockNextScreen(4)" style="font-size: 0.55rem; padding: 10px 16px;"><span>▶ CONTINUER VERS LE BUDGET ➔</span></button>
+            </div>
+        </div>
+
+        <!-- ================= ÉCRAN BOOMER 2000 (CHEAT CODE) ================= -->
+        <div class="arcade-page" id="screen-boomer">
+            <div class="boomer-container" style="max-height: 500px; overflow-y: auto;">
+                <p style="text-align: center; font-size: 0.75rem; color: #FFFF00; margin-bottom: 10px;">[Compteur de visiteurs : 0001998] &nbsp;|&nbsp; [Optimisé pour Netscape Navigator]</p>
+                <div id="boomerTableContent"></div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="boomer-btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="exitBoomerMode()">« Retourner dans le vrai jeu magique</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ÉCRAN 4 : STATION BUDGET & HOTTES ================= -->
+        <div class="arcade-page" id="screen-4">
+            <div class="cabinet-title" style="margin-top: 5px;">⚡ STATION DE CRÉDIT & HOTTES ⚡</div>
+            <p style="font-size: 0.8rem; color: #ffffff; text-align: center; font-weight: 600;">Ajoutez ou retirez des crédits pour débloquer les différentes hottes (en CAD & EUR) :</p>
+            
+            <div class="token-counter" id="arcade-token-display">0.00 $ CAD (~0,00 €)</div>
+            
+            <div class="clicker-buttons-group">
+                <button class="btn-arcade-coin btn-coin-5" onclick="addTokenBudget(5)">🪙 +5 $</button>
+                <button class="btn-arcade-coin btn-coin-10" onclick="addTokenBudget(10)">🪙 +10 $</button>
+                <button class="btn-arcade-coin" onclick="addTokenBudget(25)">🪙 +25 $</button>
+            </div>
+
+            <div class="clicker-buttons-group" style="margin-bottom: 10px;">
+                <button class="btn-arcade-deduct" onclick="addTokenBudget(-5)">➖ -5 $</button>
+                <button class="btn-arcade-deduct" onclick="addTokenBudget(-10)">➖ -10 $</button>
+                <button class="btn-arcade-deduct" onclick="addTokenBudget(-25)">➖ -25 $</button>
+            </div>
+            
+            <div class="stage-select-grid">
+                <div class="stage-btn locked" id="stage-card-easy" onclick="selectStageAndGo('easy')">
+                    <h4 id="stage-text-easy">🔒 Petite hotte</h4>
+                    <p>Cadeaux &lt;69$ (~47€)</p>
+                </div>
+                <div class="stage-btn locked" id="stage-card-medium" onclick="selectStageAndGo('medium')">
+                    <h4 id="stage-text-medium">🔒 Moyenne hotte</h4>
+                    <p>Cadeaux &lt;115$ (~78€)</p>
+                </div>
+                <div class="stage-btn locked" id="stage-card-hard" onclick="selectStageAndGo('hard')">
+                    <h4 id="stage-text-hard">🔒 Grosse hotte</h4>
+                    <p>Tous les cadeaux</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ÉCRAN 5 : CATALOGUE & HOTTE ================= -->
+        <div class="arcade-page" id="screen-5">
+            <div>
+                <h2 class="header-arcade-title">HOTTE DE NOEL</h2>
+                
+                <div class="arcade-loot-bag" id="lootBagBox">
+                    <div class="loot-icon" id="lootEmoji">🎁</div>
+                    <div class="loot-text">
+                        <h4 id="lootTitle">Hotte : Vide</h4>
+                        <p id="lootDesc">0 / 21 quêtes validées.</p>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <button class="filter-btn active" onclick="filterGifts('all', this)">Tous</button>
+                    <button class="filter-btn" onclick="filterGifts('easy', this)">🟢 Petite (&lt;69$)</button>
+                    <button class="filter-btn" onclick="filterGifts('medium', this)">🟡 Moyenne (&lt;115$)</button>
+                    <button class="filter-btn" onclick="filterGifts('hard', this)">🔴 Grosse (Tous)</button>
+                    <button class="filter-btn" onclick="filterGifts('dispo', this)">Disponibles</button>
+                    <button class="filter-btn" onclick="filterGifts('reserved', this)">Réservés</button>
+                </div>
+
+                <div class="action-btn-group">
+                    <button class="admin-toggle" onclick="toggleParentPanel()">🔒 Espace Parents (Suivi)</button>
+                    <button class="reset-data" onclick="resetReservations()">🔄 Réinitialiser</button>
+                </div>
+            </div>
+
+            <div class="parent-panel" id="parentPanel">
+                <h3>🔒 ESPACE PARENTS : SUIVI DES QUÊTES</h3>
+                <div id="parent-reservations-list">
+                    <p style="text-align: center; color: #cbd5e1; font-style: italic;">Aucune quête validée.</p>
+                </div>
+            </div>
+
+            <div class="grid" id="gift-grid"></div>
+        </div>
+
+    </div>
+
+    <script>
+        for (let i = 0; i < 35; i++) {
+            const snow = document.createElement('div');
+            snow.className = 'snowflake';
+            snow.style.left = Math.random() * 100 + 'vw';
+            snow.style.animationDuration = (Math.random() * 3 + 2.5) + 's';
+            snow.style.animationDelay = (Math.random() * 5) + 's';
+            const size = (Math.random() * 4 + 2) + 'px';
+            snow.style.width = size; snow.style.height = size;
+            document.body.appendChild(snow);
+        }
+
+        const mascotData = {
+            snowBot: { clicks: 0, maxClicks: 8, sprite: '⛄' },
+            reindeerMascot: { clicks: 0, maxClicks: 8, sprite: '🦌' },
+            santaMascot: { clicks: 0, maxClicks: 8, sprite: '🎅' }
+        };
+
+        function onMascotClicked(id, phrases, projectileEmoji) {
+            const data = mascotData[id];
+            const el = document.getElementById(id);
+            const spriteEl = el.querySelector('.mascot-sprite');
+            const bubbleEl = el.querySelector('.mascot-bubble');
+            
+            data.clicks++;
+            playHitSound();
+
+            launchProjectile(el, projectileEmoji);
+
+            const randomPhrase = phrases[Math.min(data.clicks - 1, phrases.length - 1)];
+            bubbleEl.textContent = randomPhrase;
+            bubbleEl.classList.add('show');
+            setTimeout(() => bubbleEl.classList.remove('show'), 2000);
+
+            if (data.clicks >= 5 && data.clicks < data.maxClicks) {
+                el.style.filter = 'drop-shadow(0 0 20px #ff2a6d) hue-rotate(310deg)';
+                spriteEl.style.transform = `scale(${1 + data.clicks * 0.05}) rotate(${data.clicks % 2 === 0 ? 15 : -15}deg)`;
+            }
+
+            if (data.clicks >= data.maxClicks) {
+                el.style.opacity = '0';
+                setTimeout(() => { el.style.display = 'none'; }, 500);
+            }
+        }
+
+        function launchProjectile(sourceEl, emoji) {
+            const rect = sourceEl.getBoundingClientRect();
+            const proj = document.createElement('div');
+            proj.className = 'mascot-projectile';
+            proj.textContent = emoji;
+            proj.style.left = rect.left + 'px';
+            proj.style.top = rect.top + 'px';
+            document.body.appendChild(proj);
+
+            const targetX = (window.innerWidth / 2) + (Math.random() * 350 - 175);
+            const targetY = (window.innerHeight / 2) + (Math.random() * 350 - 175);
+
+            requestAnimationFrame(() => {
+                proj.style.transform = `translate(${targetX - rect.left}px, ${targetY - rect.top}px) rotate(720deg) scale(1.6)`;
+                proj.style.opacity = '0';
+            });
+
+            setTimeout(() => proj.remove(), 1200);
+        }
+
+        function moveMascotsToEdge() {
+            ['snowBot', 'reindeerMascot', 'santaMascot'].forEach(id => {
+                const mascot = document.getElementById(id);
+                if (!mascot || mascot.style.display === 'none' || mascot.style.opacity === '0') return;
+
+                const edge = Math.floor(Math.random() * 4);
+                let posX, posY;
+                const margin = 30;
+
+                switch(edge) {
+                    case 0: posX = Math.random() * (window.innerWidth - 100); posY = margin; break;
+                    case 1: posX = Math.random() * (window.innerWidth - 100); posY = window.innerHeight - 140; break;
+                    case 2: posX = margin; posY = Math.random() * (window.innerHeight - 180) + 60; break;
+                    case 3: posX = window.innerWidth - 100; posY = Math.random() * (window.innerHeight - 180) + 60; break;
+                }
+                mascot.style.left = posX + 'px';
+                mascot.style.top = posY + 'px';
+            });
+        }
+
+        let bgmAudioCtx = null;
+        let bgmInterval = null;
+        let isBgmPlaying = false;
+
+        function initAutoBgm() {
+            if (!isBgmPlaying) {
+                toggleBgm();
+                window.removeEventListener('click', initAutoBgm);
+            }
+        }
+        window.addEventListener('click', initAutoBgm, { once: true });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const snowBot = document.getElementById('snowBot');
+            if (snowBot) { snowBot.style.left = '30px'; snowBot.style.top = '90px'; }
+            setInterval(moveMascotsToEdge, 6500);
+            updateNavigationLocks();
+            toggleBgm();
+            renderLetterMiniList();
+            initSharedReservations();
+        });
+
+        let maxUnlockedScreen = Number(localStorage.getItem('marty_max_screen')) || 1;
+
+        function goToScreen(screenNum) {
+            if (screenNum === 'boomer') {
+                activateBoomerMode();
+                return;
+            }
+            if (screenNum > maxUnlockedScreen) {
+                alert("🔒 Étape verrouillée ! Vous devez progresser dans l'ordre de l'aventure.");
+                return;
+            }
+            document.querySelectorAll('.arcade-page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-coin-btn').forEach(b => {
+                if(b.id !== 'bgm-toggle-btn') b.classList.remove('active');
+            });
+            
+            document.getElementById(`screen-${screenNum}`).classList.add('active');
+            const navBtn = document.getElementById(`nav-btn-${screenNum}`);
+            if(navBtn) navBtn.classList.add('active');
+
+            document.getElementById('snowBot').style.display = (screenNum === 1 || screenNum === 4) ? 'block' : 'none';
+            document.getElementById('reindeerMascot').style.display = (screenNum === 2) ? 'block' : 'none';
+            document.getElementById('santaMascot').style.display = (screenNum === 5) ? 'block' : 'none';
+        }
+
+        function unlockNextScreen(screenNum) {
+            if (screenNum > maxUnlockedScreen) {
+                maxUnlockedScreen = screenNum;
+                localStorage.setItem('marty_max_screen', maxUnlockedScreen);
+                updateNavigationLocks();
+            }
+            goToScreen(screenNum);
+        }
+
+        function updateNavigationLocks() {
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`nav-btn-${i}`);
+                if (btn) {
+                    if (i <= maxUnlockedScreen) {
+                        btn.classList.remove('locked-step');
+                    } else {
+                        btn.classList.add('locked-step');
+                    }
+                }
+            }
+        }
+
+        // MODE BOOMER 2000
+        function activateBoomerMode() {
+            document.querySelectorAll('.arcade-page').forEach(p => p.classList.remove('active'));
+            document.getElementById('screen-boomer').classList.add('active');
+            document.getElementById('mainBody').className = 'boomer-body';
+            document.querySelectorAll('.interactive-mascot').forEach(m => m.style.display = 'none');
+            document.getElementById('navContainer').style.display = 'none';
+            renderBoomerTable();
+        }
+
+        function exitBoomerMode() {
+            document.getElementById('mainBody').className = '';
+            document.getElementById('navContainer').style.display = 'block';
+            goToScreen(1);
+        }
+
+        function renderBoomerTable() {
+            const container = document.getElementById('boomerTableContent');
+            let html = `
+                <table class="boomer-table">
+                    <tr>
+                        <th>ID</th>
+                        <th>Aperçu</th>
+                        <th>Cadeau</th>
+                        <th>Catégorie</th>
+                        <th>Prix (CAD / EUR)</th>
+                        <th>Lien</th>
+                        <th>Réservation (Votre nom)</th>
+                    </tr>
+            `;
+            gifts.forEach(gift => {
+                const res = reservations[gift.id] || {};
+                const nameVal = res.name || '';
+                const imgCol = gift.isCustom 
+                    ? `<span style="font-size: 1.2rem;">💰</span>` 
+                    : `<img src="${gift.img}" style="width: 28px; height: 28px; object-fit: contain; display: block; margin: 0 auto;">`;
+
+                html += `
+                    <tr>
+                        <td style="text-align: center;">#${gift.id}</td>
+                        <td style="text-align: center; background: #fff;">${imgCol}</td>
+                        <td><strong>${gift.title}</strong><br><small>${gift.desc}</small></td>
+                        <td>${gift.category}</td>
+                        <td>${gift.priceDisplay}</td>
+                        <td>${(gift.isCustom || gift.noLink) ? 'Participation libre' : `<a href="${gift.url}" target="_blank">[Lien]</a>`}</td>
+                        <td>
+                            <input type="text" id="boomer-name-${gift.id}" class="boomer-input" placeholder="Votre nom..." value="${nameVal}">
+                            <button class="boomer-btn" onclick="saveBoomerRes('${gift.id}')">Enregistrer</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</table>`;
+            container.innerHTML = html;
+        }
+
+        function saveBoomerRes(id) {
+            const name = document.getElementById(`boomer-name-${id}`).value.trim();
+            if (!name) { alert("Veuillez entrer un nom !"); return; }
+            reservations[id] = { isReserved: true, name, type: 'full', amount: null };
+            persistReservations();
+            alert("Sauvegardé dans la base de données 2000 !");
+            renderBoomerTable();
+            renderGifts('all');
+        }
+
+        // AUDIO & EFFETS SONORES
+        function toggleBgm() {
+            const btn = document.getElementById('bgm-toggle-btn');
+            if (!isBgmPlaying) {
+                isBgmPlaying = true;
+                startBgm();
+                btn.textContent = '🔊 Musique';
+                btn.classList.add('playing');
+            } else {
+                isBgmPlaying = false;
+                stopBgm();
+                btn.textContent = '🔇 Musique';
+                btn.classList.remove('playing');
+            }
+        }
+
+        function startBgm() {
+            if (!bgmAudioCtx) { bgmAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            if (bgmAudioCtx.state === 'suspended') { bgmAudioCtx.resume(); }
+            if (bgmInterval) return;
+
+            const xmasMelody = [
+                329.63, 329.63, 329.63, 329.63, 329.63, 329.63,  
+                329.63, 392.00, 261.63, 293.66, 329.63, 
+                349.23, 349.23, 349.23, 349.23, 349.23, 
+                329.63, 329.63, 329.63, 329.63, 293.66, 293.66, 329.63, 293.66, 392.00 
+            ];
+            let index = 0;
+
+            bgmInterval = setInterval(() => {
+                if (!isBgmPlaying || !bgmAudioCtx) return;
+                try {
+                    const osc = bgmAudioCtx.createOscillator();
+                    const gain = bgmAudioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = xmasMelody[index];
+                    gain.gain.setValueAtTime(0.012, bgmAudioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, bgmAudioCtx.currentTime + 0.28);
+                    osc.connect(gain); gain.connect(bgmAudioCtx.destination);
+                    osc.start(); osc.stop(bgmAudioCtx.currentTime + 0.28);
+                    index = (index + 1) % xmasMelody.length;
+                } catch(e) {}
+            }, 320);
+        }
+
+        function stopBgm() {
+            if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
+        }
+
+        function playArcadeChime() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, index) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+                    }, index * 80);
+                });
+            } catch(e) {}
+        }
+
+        function playHitSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+            } catch(e) {}
+        }
+
+        function playNegationSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(90, audioCtx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            } catch(e) {}
+        }
+
+        function playGameOverSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [330, 311, 294, 277, 246];
+                notes.forEach((freq, index) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+                    }, index * 180);
+                });
+            } catch(e) {}
+        }
+
+        function playUnlockFanfare() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const fanfareNotes = [523.25, 659.25, 783.99, 1046.50];
+                fanfareNotes.forEach((freq, index) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(); osc.stop(audioCtx.currentTime + 0.35);
+                    }, index * 120);
+                });
+            } catch(e) {}
+        }
+
+        // GESTION DE LA PRÉVISUALISATION MODALE
+        function openGiftPreview(title, price, imgUrl, itemUrl) {
+            playArcadeChime();
+            const modal = document.getElementById('previewModal');
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalPrice').textContent = price;
+            
+            const imgContainer = document.getElementById('modalImgContainer');
+            
+            if (imgUrl.includes('💰')) {
+                imgContainer.innerHTML = `<span style="font-size: 5rem;">💰🎁</span>`;
+            } else {
+                imgContainer.innerHTML = `<img id="modalImg" src="${imgUrl}" alt="${title}">`;
+            }
+
+            const linkBtn = document.getElementById('modalLinkBtn');
+            const matchedGift = gifts.find(g => g.title === title);
+            if (itemUrl && itemUrl !== '#' && !(matchedGift && matchedGift.noLink)) {
+                linkBtn.href = itemUrl;
+                linkBtn.style.display = 'flex';
+            } else {
+                linkBtn.style.display = 'none';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closePreviewModal() {
+            const modal = document.getElementById('previewModal');
+            modal.classList.remove('active');
+        }
+
+        let arcadeToken = Number(localStorage.getItem('marty_arcade_token')) || 0;
+        let prevEasyUnlocked = arcadeToken >= 35;
+        let prevMediumUnlocked = arcadeToken >= 70;
+        let prevHardUnlocked = arcadeToken >= 120;
+        updateBudgetUI();
+
+        function addTokenBudget(amount) {
+            const oldToken = arcadeToken;
+            arcadeToken = Math.max(0, arcadeToken + amount);
+            localStorage.setItem('marty_arcade_token', arcadeToken);
+            
+            const easyUnlockedNow = arcadeToken >= 35;
+            const mediumUnlockedNow = arcadeToken >= 70;
+            const hardUnlockedNow = arcadeToken >= 120;
+
+            if ((easyUnlockedNow && !prevEasyUnlocked) || 
+                (mediumUnlockedNow && !prevMediumUnlocked) || 
+                (hardUnlockedNow && !prevHardUnlocked)) {
+                playUnlockFanfare();
+                let newlyUnlockedId = easyUnlockedNow && !prevEasyUnlocked ? 'stage-card-easy' : 
+                                      (mediumUnlockedNow && !prevMediumUnlocked ? 'stage-card-medium' : 'stage-card-hard');
+                triggerUnlockAnimation(newlyUnlockedId);
+            } else if (amount > 0) {
+                playArcadeChime();
+            } else if (amount < 0) {
+                if (arcadeToken === 0 && oldToken > 0) {
+                    playGameOverSound();
+                } else {
+                    playNegationSound();
+                }
+            }
+
+            prevEasyUnlocked = easyUnlockedNow;
+            prevMediumUnlocked = mediumUnlockedNow;
+            prevHardUnlocked = hardUnlockedNow;
+            updateBudgetUI();
+        }
+
+        function triggerUnlockAnimation(cardId) {
+            const card = document.getElementById(cardId);
+            if(card) {
+                card.classList.remove('just-unlocked');
+                void card.offsetWidth;
+                card.classList.add('just-unlocked');
+            }
+        }
+
+        function updateBudgetUI() {
+            const tokenDisp = document.getElementById('arcade-token-display');
+            if(tokenDisp) {
+                const eurVal = arcadeToken * 0.68;
+                tokenDisp.textContent = arcadeToken.toFixed(2) + ' $ CAD (~' + eurVal.toFixed(2) + ' €)';
+            }
+
+            const easyCard = document.getElementById('stage-card-easy');
+            const easyText = document.getElementById('stage-text-easy');
+            const mediumCard = document.getElementById('stage-card-medium');
+            const mediumText = document.getElementById('stage-text-medium');
+            const hardCard = document.getElementById('stage-card-hard');
+            const hardText = document.getElementById('stage-text-hard');
+
+            if(!easyCard) return;
+
+            if (arcadeToken >= 35) {
+                easyCard.classList.remove('locked');
+                easyCard.classList.add('unlocked-ready');
+                easyText.textContent = '🟢 Petite hotte';
+            } else {
+                easyCard.classList.add('locked');
+                easyCard.classList.remove('unlocked-ready');
+                easyText.textContent = '🔒 Petite hotte (35$ / 24€ min)';
+            }
+
+            if (arcadeToken >= 70) {
+                mediumCard.classList.remove('locked');
+                mediumCard.classList.add('unlocked-ready');
+                mediumText.textContent = '🟡 Moyenne hotte';
+            } else {
+                mediumCard.classList.add('locked');
+                mediumCard.classList.remove('unlocked-ready');
+                mediumText.textContent = '🔒 Moyenne hotte (70$ / 48€ min)';
+            }
+
+            if (arcadeToken >= 120) {
+                hardCard.classList.remove('locked');
+                hardCard.classList.add('unlocked-ready');
+                hardText.textContent = '🔴 Grosse hotte';
+            } else {
+                hardCard.classList.add('locked');
+                hardCard.classList.remove('unlocked-ready');
+                hardText.textContent = '🔒 Grosse hotte (120$ / 82€ min)';
+            }
+        }
+
+        function selectStageAndGo(stageKey) {
+            if (stageKey === 'easy' && arcadeToken < 35) {
+                alert("⚠️ Crédit insuffisant ! Il vous faut au moins 35 $ pour ouvrir la Petite hotte.");
+                return;
+            }
+            if (stageKey === 'medium' && arcadeToken < 70) {
+                alert("⚠️ Crédit insuffisant ! Il vous faut au moins 70 $ pour ouvrir la Moyenne hotte.");
+                return;
+            }
+            if (stageKey === 'hard' && arcadeToken < 120) {
+                alert("⚠️ Crédit insuffisant ! Il vous faut au moins 120 $ pour ouvrir la Grosse hotte.");
+                return;
+            }
+            unlockNextScreen(5);
+            filterGifts(stageKey, null);
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active');
+                if ((stageKey === 'easy' && b.getAttribute('onclick')?.includes("'easy'")) ||
+                    (stageKey === 'medium' && b.getAttribute('onclick')?.includes("'medium'")) ||
+                    (stageKey === 'hard' && b.getAttribute('onclick')?.includes("'hard'"))) {
+                    b.classList.add('active');
+                }
+            });
+        }
+
+        // LISTE DES CADEAUX AVEC TITRES ORIGINAUX + PETIT TEXTE ENFANT
+        const gifts = [
+            { id: 'cagnotte', title: "💰 La Cagnotte Magique", desc: "Pour m'aider à réaliser mes plus grands rêves de Noël !", childText: "« Pour m'aider à acheter ce qui manque ! 🌟 »", category: "DON & CAGNOTTE", priceNum: 0, priceDisplay: "Montant libre", site: "ENVOI PARENTS", isCustom: true, url: "#" },
+            { id: 1, title: "Lego 71500 sous-marin de requin", desc: "Il plonge trop sous l'eau avec des gros requins qui font peur !", childText: "« Il va trop vite sous l'eau avec les requins ! 🦈 »", category: "LEGO", priceNum: 206.84, priceDisplay: "206,84 $ CAD<br>(~140,65 €)", site: "AMAZON", img: "LEGO 71500 sous-marin de requin.png", url: "https://a.co/d/0bloB9hP" },
+            { id: 2, title: "Switch 2 sport resort", desc: "Pour courir et sauter dans le salon sans abîmer les meubles !", childText: "« C'est pour faire du sport dans la maison ! 🎮 »", category: "JEUX VIDEO", priceNum: 97.70, priceDisplay: "97,70 $ CAD<br>(~66,44 €)", site: "AMAZON", img: "Switch 2 sport resort.png", url: "https://a.co/d/0fnByu9D" },
+            { id: 3, title: "Jeu électronique parlant de bataille navale avec lumières", desc: "Il y a des lumières partout quand on touche les bateaux !", childText: "« Boum ! Touché coulé avec plein de lumières ! 🚢 »", category: "JEU DE SOCIETE", priceNum: 68.99, priceDisplay: "68,99 $ CAD<br>(~46,91 €)", site: "AMAZON", img: "jeu électronique parlant de bataille navale avec lumières.png", url: "https://www.amazon.ca/dp/B08C9N6HL1?ref=cm_sw_r_cp_ud_dp_TH4VS7G684NBBVVDZTP2&ref_=cm_sw_r_cp_ud_dp_TH4VS7G684NBBVVDZTP2&social_share=cm_sw_r_cp_ud_dp_TH4VS7G684NBBVVDZTP2" },
+            { id: 4, title: "Playmobil Navette spatiale Mission", desc: "3, 2, 1... Décollage vers les étoiles avec les bonhommes de l'espace !", childText: "« Vers l'infini et au-delà vers la lune ! 🚀 »", category: "PLAYMOBIL", priceNum: 71.90, priceDisplay: "71,90 $ CAD<br>(~48,89 €)", site: "AMAZON", img: "Playmobil Navette spatiale Mission.png", url: "https://a.co/d/01P5BOLD" },
+            { id: 5, title: "PLAYMOBIL Knight Rider", desc: "Elle roule toute seule et elle est trop stylée comme dans la télé !", childText: "« Regarde elle roule toute seule comme KITT ! 🏎️ »", category: "PLAYMOBIL", priceNum: 118.34, priceDisplay: "118,34 $ CAD<br>(~80,47 €)", site: "AMAZON", img: "PLAYMOBIL Knight Rider.png", url: "https://a.co/d/0hn6Opli" },
+            { id: 6, title: "Ensemble d'avion air canada", desc: "Il fait 'Vrooooum' dans le ciel pour aller voir les pays lointains.", childText: "« Vrooooum dans les grands nuages blancs ! ✈️ »", category: "JOUET", priceNum: 40.25, priceDisplay: "40,25 $ CAD<br>(~27,37 €)", site: "BUREAU PRO", img: "Ensemble d'avion air canada.png", url: "https://www.buroprocitation.ca/fr_ca/ensemble-d-avion-air-canada-j406481" },
+            { id: 7, title: "Porsche K3", desc: "Elle va tellement vite qu'on dirait un éclair sur le tapis !", childText: "« C'est la plus rapide de toutes les voitures ! 🏁 »", category: "JOUET", priceNum: 73.81, priceDisplay: "73,81 $ CAD<br>(~50,19 €)", site: "AMAZON", img: "Porsche K3.png", url: "https://a.co/d/0dD8eE8A" },
+            { id: 8, title: "Lego Ford", desc: "Pour réparer les roues et faire le plein d'essence comme les grands.", category: "LEGO", priceNum: 128.78, priceDisplay: "128,78 $ CAD<br>(~87,57 €)", site: "AMAZON", img: "Lego Ford.png", url: "https://www.amazon.ca/dp/B0G2T3B3Y3?ref=cm_sw_r_cp_ud_dp_9WQ9PJ8KT5HW4HF7GJPG&ref_=cm_sw_r_cp_ud_dp_9WQ9PJ8KT5HW4HF7GJPG&social_share=cm_sw_r_cp_ud_dp_9WQ9PJ8KT5HW4HF7GJPG", childText: "« Vroum vroum à l'atelier mécanique ! 🔧 »" },
+            { id: 9, title: "Baleine bleue", desc: "Elle nage super bien dans le bain et fait de grosses éclaboussures !", childText: "« Elle fait de super grosses éclaboussures ! 🐋 »", category: "JOUET", priceNum: 54.04, priceDisplay: "54,04 $ CAD<br>(~36,75 €)", site: "BUREAU PRO", img: "baleine.jpg", url: "https://www.buroprocitation.ca/fr_ca/baleine-bleue-j34706" },
+            { id: 10, title: "Izakaya Japonais Lego", desc: "Plein de lumières néons et de petits bonhommes mystérieux !", childText: "« C'est un restaurant secret avec plein de néons ! 🏮 »", category: "JOUET", priceNum: 201.24, priceDisplay: "201,24 $ CAD<br>(~136,84 €)", site: "AMAZON", img: "Izakaya Japonais Lego.png", url: "https://a.co/d/0dMIUjL0" },
+            { id: 11, title: "Bandai Official Gashapon Machine", desc: "On tourne la manette et hop ! Une petite boule surprise qui tombe !", childText: "« Qu'est-ce qui va tomber dedans ? Suspense ! 🎰 »", category: "JOUET", priceNum: 156.39, priceDisplay: "156,39 $ CAD<br>(~106,35 €)", site: "AMAZON", img: "Gatcha.png", url: "https://a.co/d/08Wc9WJv" },
+            { id: 12, title: "Garage Lego", desc: "Avec des néons partout pour garer toutes mes voitures de collection.", childText: "« Un super parking sur plusieurs étages ! 🅿️ »", category: "LEGO", priceNum: 169.04, priceDisplay: "169,04 $ CAD<br>(~114,95 €)", site: "AMAZON", img: "Garage Lego.png", url: "https://a.co/d/0118edyp" },
+            { id: 13, title: "Lego Bateau", desc: "Prêt à naviguer sur les mers pour trouver plein de trésors cachés !", childText: "« À l'abordage des îles aux trésors ! 🏴‍☠️ »", category: "LEGO", priceNum: 115.00, priceDisplay: "115,00 $ CAD<br>(~78,20 €)", site: "EN MAGASIN", img: "Lego Bateau.png", url: "#", noLink: true },
+            { id: 14, title: "LEGO star wars", desc: "Pour revivre les plus grandes batailles au fond de la galaxie !", childText: "« Que la Force soit avec mes vaisseaux ! ✨ »", category: "LEGO", priceNum: 92.00, priceDisplay: "92,00 $ CAD<br>(~62,56 €)", site: "EN MAGASIN", img: "LEGO star wars.png", url: "#", noLink: true },
+            { id: 15, title: "Globe Magic Adventures", desc: "Il tourne et raconte plein de secrets sur tous les pays de la Terre !", childText: "« Pour faire le tour du monde sans bouger ! 🌍 »", category: "JEU DE SOCIETE", priceNum: 114.99, priceDisplay: "114,99 $ CAD<br>(~78,19 €)", site: "AMAZON", img: "Globe.png", url: "https://a.co/d/012FJe4L" },
+            { id: 16, title: "Hot Wheels Custom '90 Honda Civic", desc: "Une petite voiture de course trop stylée à construire brique par brique !", childText: "« Une petite Honda trop cool en briques ! 🚗 »", category: "LEGO", priceNum: 22.99, priceDisplay: "22,99 $ CAD<br>(~15,63 €)", site: "AMAZON", img: "Honda lego.png", url: "https://a.co/d/04Z4Vy8t" },
+            { id: 17, title: "Stage Tour PS5", desc: "Avec la vraie guitare sans fil pour faire des méga concerts dans le salon !", childText: "« Je fais des concerts de rock sur la PS5 ! 🎸 »", category: "JEUX VIDEO", priceNum: 206.95, priceDisplay: "206,95 $ CAD<br>(~140,73 €)", site: "WALMART", img: "Stage Tour PS5.png", url: "https://www.walmart.ca/en/ip/Stage-Tour-Game-Kramer-Wireless-Guitar-Controller-Bundle-for-PlayStation-5-consoles/51Q8QDQRQH05?selectedSellerId=0&cmpid=SEM_CA_32411_1DGSTBLCVV&utm_id=SEM_CA_32411_1DGSTBLCVV&utm_medium=paid_search&utm_source=google&utm_campaign=always_on&gclsrc=aw.ds&gad_source=1&gad_campaignid=20046767704&gbraid=0AAAAADv6L0QS4rmeFJpXIJNdIM3SN17yE&gclid=CjwKCAiAn4XYBhA-EiwA8176FfLMnT85HLuqqgei2AjWFNJR55rQEE_VN1fh8R8CLVRfYn-58IuvbhoCRM4QAvD_BwE" },
+            { id: 18, title: "Splatoon Switch 2", desc: "Bataille de peinture géante partout sur l'écran avec toute l'équipe !", childText: "« Splash ! Peinture partout en équipe ! 🎨 »", category: "JEUX VIDEO", priceNum: 97.70, priceDisplay: "97,70 $ CAD<br>(~66,44 €)", site: "AMAZON", img: "Splatoon Switch 2.png", url: "https://a.co/d/0dRSkoFB" },
+            { id: 19, title: "Lego Titanic", desc: "Le plus grand bateau du monde à assembler pièce par pièce !", childText: "« Un super grand bateau à construire ! 🚢 »", category: "LEGO", priceNum: 110.39, priceDisplay: "110,39 $ CAD<br>(~75,07 €)", site: "AMAZON", img: "Lego Titanic.png", url: "https://a.co/d/06QusiK8" },
+            { id: 20, title: "Lego roller coaster", desc: "Un grand manège qui monte tout en haut et descend à toute vitesse !", childText: "« Youpi ! Les montagnes russes à la maison ! 🎢 »", category: "LEGO", priceNum: 128.79, priceDisplay: "128,79 $ CAD<br>(~87,58 €)", site: "AMAZON", img: "Lego roller coaster.png", url: "https://a.co/d/0604Ql6j" }
+        ];
+
+        function renderLetterMiniList() {
+            const container = document.getElementById('letterMiniListContainer');
+            if(!container) return;
+            let html = '';
+            gifts.forEach(g => {
+                // Images en plus grand format (60px x 60px)
+                const imgTag = g.isCustom ? '<span style="font-size: 2.2rem;">💰</span>' : `<img src="${g.img}" style="width: 58px; height: 58px; object-fit: contain; background: #fff; border-radius: 6px; padding: 3px; border: 2px solid var(--parchment-border);">`;
+                html += `
+                    <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 8px; border-radius: 8px; border: 1px solid rgba(146,64,14,0.3);">
+                        <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 62px; height: 62px;">${imgTag}</div>
+                        <div style="flex-grow: 1; font-size: 0.44rem; line-height: 1.6;">
+                            <strong>${g.title}</strong><br>
+                            <span style="color: #451a03; font-style: italic; font-weight: 600;">${g.childText || g.desc}</span>
+                        </div>
+                        <div style="flex-shrink: 0; font-family: 'Press Start 2P', monospace; font-size: 0.4rem; color: #b45309; text-align: right; line-height: 1.4;">
+                            ${g.priceDisplay.replace('<br>', '<br>')}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        
+        // =========================================================================
+        // SYNCHRONISATION PARTAGÉE EN TEMPS RÉEL (FIREBASE REALTIME DATABASE)
+        // Remplacez firebaseConfig ci-dessous par la configuration de votre projet
+        // gratuit sur console.firebase.google.com (Realtime Database en mode test/règles).
+        // Si non configuré, l'application fonctionne en localStorage sur chaque navigateur.
+        // =========================================================================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDdcjVmi3u6axLaZNchf25ZxNnryztKg78",
+            authDomain: "liste-noel-marty.firebaseapp.com",
+            databaseURL: "https://liste-noel-marty-default-rtdb.firebaseio.com",
+            projectId: "liste-noel-marty",
+            storageBucket: "liste-noel-marty.firebasestorage.app",
+            messagingSenderId: "334809056125",
+            appId: "1:334809056125:web:1a338e645d8728cace8214"
+        };
+        const SHARED_DB_PATH = "marty_noel_2026/reservations";
+        let sharedDbRef = null;
+        let isFirebaseReady = false;
+
+        function initSharedReservations() {
+            const hasConfig = Boolean(FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.apiKey);
+            if (!hasConfig || typeof firebase === "undefined") {
+                updateSyncBadge(false);
+                return;
+            }
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                sharedDbRef = firebase.database().ref(SHARED_DB_PATH);
+                isFirebaseReady = true;
+                updateSyncBadge(true);
+
+                sharedDbRef.on("value", (snapshot) => {
+                    const remoteData = snapshot.val();
+                    reservations = (remoteData && typeof remoteData === "object") ? remoteData : {};
+                    localStorage.setItem("noel_marty_arcade_cabinet_v7", JSON.stringify(reservations));
+                    renderGifts(currentFilter);
+                    if (document.getElementById("screen-boomer")?.classList.contains("active")) {
+                        renderBoomerTable();
+                    }
+                });
+            } catch (err) {
+                console.warn("Firebase init fallback to localStorage:", err);
+                isFirebaseReady = false;
+                updateSyncBadge(false);
+            }
+        }
+
+        function persistReservations() {
+            localStorage.setItem("noel_marty_arcade_cabinet_v7", JSON.stringify(reservations));
+            if (isFirebaseReady && sharedDbRef) {
+                sharedDbRef.set(reservations).catch((err) => {
+                    console.error("Erreur sync Firebase:", err);
+                });
+            }
+        }
+
+        function updateSyncBadge(online) {
+            const lootDesc = document.getElementById("lootDesc");
+            if (lootDesc && !online && !lootDesc.dataset.warned) {
+                lootDesc.dataset.warned = "1";
+            }
+        }
+
+        let reservations = JSON.parse(localStorage.getItem('noel_marty_arcade_cabinet_v7')) || {};
+        let currentFilter = 'all';
+
+        function renderGifts(filter = 'all') {
+            currentFilter = filter;
+            const grid = document.getElementById('gift-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            let reservedCount = 0;
+            let parentListHtml = '';
+
+            gifts.forEach(gift => {
+                const resInfo = reservations[gift.id];
+                const isReserved = resInfo && resInfo.isReserved;
+                
+                if (isReserved) {
+                    reservedCount++;
+                    let detailsText = (gift.isCustom || resInfo.type === 'part')
+                        ? `<span style="color: var(--arcade-yellow);">Participation de <strong>${resInfo.amount}$</strong> par <strong>${resInfo.name}</strong></span>`
+                        : `<span style="color: var(--arcade-green);">Réservé par <strong>${resInfo.name}</strong></span>`;
+
+                    parentListHtml += `
+                        <div class="parent-list-item">
+                            <span>🎁 <strong>${gift.title}</strong></span>
+                            <span>${detailsText}</span>
+                        </div>
+                    `;
+                }
+
+                if (filter === 'dispo' && isReserved) return;
+                if (filter === 'reserved' && !isReserved) return;
+                if (!gift.isCustom) {
+                    if (filter === 'easy' && gift.priceNum >= 69) return;
+                    if (filter === 'medium' && gift.priceNum > 115) return;
+                }
+
+                const hasLink = gift.url && gift.url !== "#";
+                const savedName = resInfo ? resInfo.name : '';
+                const savedAmount = (resInfo && resInfo.amount) ? resInfo.amount : '';
+
+                const card = document.createElement('div');
+                card.className = `card ${isReserved ? 'reserved' : ''}`;
+                
+                let actionHtml = '';
+                if (!isReserved) {
+                    if (gift.isCustom) {
+                        actionHtml = `
+                            <div class="reservation-box" style="background: rgba(251, 191, 36, 0.1); border-color: var(--zelda-gold);">
+                                <p style="font-size: 0.7rem; color: var(--zelda-gold); margin-bottom: 6px; font-weight: 700;">💡 Participation libre (parents)</p>
+                                <div class="form-row"><input type="text" id="name-${gift.id}" class="form-input" placeholder="Votre prénom..." value="${savedName}"></div>
+                                <div class="form-row" style="margin-top: 4px;"><input type="number" id="amount-${gift.id}" class="form-input" placeholder="Montant en $..." value="${savedAmount}"></div>
+                                <div class="card-actions-row" style="margin-top: 6px;">
+                                    <button class="btn-action btn-submit-res" style="background: var(--zelda-gold); color: #000;" onclick="submitCagnotte('${gift.id}', event)">🎁 Valider</button>
+                                </div>
+                            </div>
+                        `;
+                    } else if (gift.noLink) {
+                        actionHtml = `
+                            <div class="reservation-box" style="background: rgba(251, 191, 36, 0.1); border-color: var(--zelda-gold);">
+                                <p style="font-size: 0.7rem; color: var(--zelda-gold); margin-bottom: 6px; font-weight: 700;">💝 Pas de lien en ligne — Demande de participation</p>
+                                <div class="form-row"><input type="text" id="name-${gift.id}" class="form-input" placeholder="Votre prénom..." value="${savedName}"></div>
+                                <div class="form-row" style="margin-top: 4px;"><input type="number" id="amount-${gift.id}" class="form-input" placeholder="Participation en $..." value="${savedAmount}"></div>
+                                <div class="card-actions-row" style="margin-top: 6px;">
+                                    <button class="btn-action btn-submit-res" style="background: var(--zelda-gold); color: #000;" onclick="submitParticipation('${gift.id}', event)">💝 Participer</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        actionHtml = `
+                            <div class="reservation-box">
+                                <div class="form-row"><input type="text" id="name-${gift.id}" class="form-input" placeholder="Votre prénom..." value="${savedName}"></div>
+                                <div class="card-actions-row">
+                                    <a href="${gift.url}" target="_blank" class="btn-action btn-buy-link ${hasLink ? '' : 'disabled'}">🔍 Voir</a>
+                                    <button class="btn-action btn-submit-res" onclick="submitReservation('${gift.id}', event)">🎁 Offrir</button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    let badgeText = (gift.isCustom || resInfo.type === 'part') ? `Participation : ${resInfo.amount}$ (${resInfo.name})` : `Offert par ${resInfo.name}`;
+                    actionHtml = `
+                        <div class="reservation-box">
+                            <div class="reserved-details">✅ ${badgeText}</div>
+                            <button class="btn-cancel-res" onclick="cancelReservation('${gift.id}')">Modifier / Annuler</button>
+                        </div>
+                    `;
+                }
+
+                const safeTitle = gift.title.replace(/'/g, "\\'");
+                const safeImg = gift.isCustom ? '💰🎁' : gift.img;
+
+                let mediaHtml = gift.isCustom ? `
+                    <div class="img-container" style="background: linear-gradient(135deg, #291157, #180d35);" onclick="openGiftPreview('${safeTitle}', '${gift.priceDisplay.replace('<br>', ' - ')}', '${safeImg}', '${gift.url}')">
+                        <span style="font-size: 3.5rem;">💰🎁</span>
+                    </div>
+                ` : `
+                    <div class="img-container" onclick="openGiftPreview('${safeTitle}', '${gift.priceDisplay.replace('<br>', ' - ')}', '${safeImg}', '${gift.url}')">
+                        <img src="${gift.img}" alt="${gift.title}" loading="lazy">
+                    </div>
+                `;
+
+                card.innerHTML = `
+                    <div class="badge-category">${gift.category}</div>
+                    <div class="badge-price">${gift.priceDisplay}</div>
+                    ${mediaHtml}
+                    <div class="card-content">
+                        <div>
+                            <h3>${gift.title}</h3>
+                            <div class="card-desc">${gift.desc}</div>
+                            <span class="site-badge">📍 ${gift.site}</span>
+                        </div>
+                        <div>${actionHtml}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            updateLootBag(reservedCount, gifts.length);
+
+            const parentListContainer = document.getElementById('parent-reservations-list');
+            if(parentListContainer) {
+                parentListContainer.innerHTML = parentListHtml === '' ? `<p style="text-align: center; color: #cbd5e1; font-style: italic;">Aucune quête validée.</p>` : parentListHtml;
+            }
+        }
+
+        function updateLootBag(reserved, total) {
+            const lootEmoji = document.getElementById('lootEmoji');
+            const lootTitle = document.getElementById('lootTitle');
+            const lootDesc = document.getElementById('lootDesc');
+            if(!lootEmoji) return;
+            
+            const percent = (reserved / total);
+            lootEmoji.style.transform = `scale(${1 + percent * 0.3})`;
+
+            if (reserved === 0) {
+                lootEmoji.textContent = '🎁';
+                lootTitle.textContent = 'Hotte : Vide';
+                lootDesc.textContent = '0 / 21 quêtes validées.';
+            } else if (reserved < total) {
+                lootEmoji.textContent = '🛍️';
+                lootTitle.textContent = `Hotte en charge (${reserved}/${total})`;
+                lootDesc.textContent = 'La magie s\'accumule sous le sapin ! ✨';
+            } else {
+                lootEmoji.textContent = '🎅🎁';
+                lootTitle.textContent = 'VICTOIRE ! HOTTE PLEINE !';
+                lootDesc.textContent = 'Tous les cadeaux sont sécurisés ! GG ! 🎄';
+            }
+        }
+
+        function submitReservation(id, event) {
+            const nameInput = document.getElementById(`name-${id}`);
+            const name = nameInput.value.trim();
+
+            if (!name) { alert("Veuillez indiquer votre prénom !"); nameInput.focus(); return; }
+
+            reservations[id] = { isReserved: true, name, type: 'full', amount: null };
+            persistReservations();
+            
+            playArcadeChime();
+            createPixelBurst(event.target);
+
+            setTimeout(() => { renderGifts(currentFilter); }, 300);
+        }
+
+        function submitCagnotte(id, event) {
+            const nameInput = document.getElementById(`name-${id}`);
+            const amountInput = document.getElementById(`amount-${id}`);
+            const name = nameInput.value.trim();
+            const amount = amountInput.value.trim();
+
+            if (!name) { alert("Veuillez indiquer votre prénom !"); nameInput.focus(); return; }
+            if (!amount || isNaN(amount) || Number(amount) <= 0) { alert("Veuillez indiquer un montant valide pour la cagnotte !"); amountInput.focus(); return; }
+
+            reservations[id] = { isReserved: true, name, type: 'part', amount: Number(amount) };
+            persistReservations();
+            
+            playArcadeChime();
+            createPixelBurst(event.target);
+
+            setTimeout(() => { renderGifts(currentFilter); }, 300);
+        }
+
+        function submitParticipation(id, event) {
+            const nameInput = document.getElementById(`name-${id}`);
+            const amountInput = document.getElementById(`amount-${id}`);
+            const name = nameInput.value.trim();
+            const amount = amountInput.value.trim();
+
+            if (!name) { alert("Veuillez indiquer votre prénom pour votre participation !"); nameInput.focus(); return; }
+            if (!amount || isNaN(amount) || Number(amount) <= 0) { alert("Cet article n'a pas de lien direct : veuillez indiquer un montant de participation valide !"); amountInput.focus(); return; }
+
+            reservations[id] = { isReserved: true, name, type: 'part', amount: Number(amount) };
+            persistReservations();
+            
+            playArcadeChime();
+            createPixelBurst(event.target);
+
+            setTimeout(() => { renderGifts(currentFilter); }, 300);
+        }
+
+        function createPixelBurst(button) {
+            const rect = button.getBoundingClientRect();
+            const x = rect.left + rect.width / 2; const y = rect.top + rect.height / 2;
+            for (let i = 0; i < 6; i++) {
+                const star = document.createElement('div');
+                star.className = 'star-particle'; star.textContent = '⭐';
+                const angle = Math.random() * Math.PI * 2; const distance = 35 + Math.random() * 30;
+                star.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+                star.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+                star.style.left = `${x}px`; star.style.top = `${y}px`;
+                document.body.appendChild(star);
+                setTimeout(() => star.remove(), 800);
+            }
+        }
+
+        function cancelReservation(id) {
+            if (confirm("Modifier ou annuler cette participation ?")) {
+                delete reservations[id];
+                persistReservations();
+                renderGifts(currentFilter);
+            }
+        }
+
+        function toggleParentPanel() {
+            const panel = document.getElementById('parentPanel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function filterGifts(type, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+            renderGifts(type);
+        }
+
+        function resetReservations() {
+            if (confirm("Réinitialiser toutes les quêtes de la hotte ?")) {
+                reservations = {};
+                persistReservations();
+                renderGifts(currentFilter);
+            }
+        }
+
+        let currentLetterSlide = 1;
+        const totalLetterSlides = 4;
+
+        function changeLetterSlide(direction) {
+            document.getElementById(`slide-${currentLetterSlide}`).classList.remove('active-slide');
+            currentLetterSlide += direction;
+            if (currentLetterSlide > totalLetterSlides) currentLetterSlide = 1;
+            if (currentLetterSlide < 1) currentLetterSlide = totalLetterSlides;
+            document.getElementById(`slide-${currentLetterSlide}`).classList.add('active-slide');
+            document.getElementById('slideCounter').textContent = `PAGE ${currentLetterSlide} / ${totalLetterSlides}`;
+        }
+
+        renderGifts('all');
+    </script>
+</body>
+</html>
