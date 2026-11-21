@@ -892,15 +892,15 @@
             if (!bgmAudioCtx) {
                 bgmAudioCtx = new AudioCtx();
                 const compressor = bgmAudioCtx.createDynamicsCompressor();
-                compressor.threshold.value = -14;
-                compressor.knee.value = 18;
-                compressor.ratio.value = 6;
-                compressor.attack.value = 0.005;
-                compressor.release.value = 0.15;
+                compressor.threshold.value = -3;
+                compressor.knee.value = 6;
+                compressor.ratio.value = 2;
+                compressor.attack.value = 0.002;
+                compressor.release.value = 0.08;
 
                 audioMasterGain = bgmAudioCtx.createGain();
-                // Android Chrome tends to attenuate WebAudio oscillators; boost slightly on Android
-                audioMasterGain.gain.value = isAndroidDevice ? 2.4 : 1.0;
+                // Gain plus élevé pour compenser l'atténuation WebAudio sur Android et petits haut-parleurs
+                audioMasterGain.gain.value = isAndroidDevice ? 5.0 : 2.0;
 
                 compressor.connect(audioMasterGain);
                 audioMasterGain.connect(bgmAudioCtx.destination);
@@ -949,13 +949,16 @@
 
         function goToScreen(screenNum) {
             if (screenNum === 'boomer') {
+                playPageStepSound(true);
                 activateBoomerMode();
                 return;
             }
             if (screenNum > maxUnlockedScreen) {
+                playNegationSound();
                 alert("🔒 Étape verrouillée ! Vous devez progresser dans l'ordre de l'aventure.");
                 return;
             }
+            playPageStepSound(false);
             document.querySelectorAll('.arcade-page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-coin-btn').forEach(b => {
                 if(b.id !== 'bgm-toggle-btn') b.classList.remove('active');
@@ -976,6 +979,7 @@
                 localStorage.setItem('marty_max_screen', maxUnlockedScreen);
                 updateNavigationLocks();
             }
+            playPageStepSound(true);
             goToScreen(screenNum);
         }
 
@@ -1003,6 +1007,7 @@
         }
 
         function exitBoomerMode() {
+            playPageStepSound(false);
             document.getElementById('mainBody').className = '';
             document.getElementById('navContainer').style.display = 'block';
             goToScreen(1);
@@ -1075,6 +1080,22 @@
             }
         }
 
+        function playBgmNote(freq, durSec = 0.28) {
+            if (!bgmAudioCtx) return;
+            try {
+                const osc = bgmAudioCtx.createOscillator();
+                const gain = bgmAudioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                const peakGain = isAndroidDevice ? 0.16 : 0.07;
+                gain.gain.setValueAtTime(peakGain, bgmAudioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, bgmAudioCtx.currentTime + durSec);
+                osc.connect(gain);
+                gain.connect(audioMasterGain || bgmAudioCtx.destination);
+                osc.start(); osc.stop(bgmAudioCtx.currentTime + durSec);
+            } catch(e) {}
+        }
+
         function startBgm() {
             const ctx = getAudioContext();
             if (!ctx || bgmInterval) return;
@@ -1088,20 +1109,12 @@
             let index = 0;
 
             bgmInterval = setInterval(() => {
-                if (!isBgmPlaying || !bgmAudioCtx || bgmAudioCtx.state !== 'running') return;
-                try {
-                    const osc = bgmAudioCtx.createOscillator();
-                    const gain = bgmAudioCtx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.value = xmasMelody[index];
-                    const peakGain = isAndroidDevice ? 0.065 : 0.028;
-                    gain.gain.setValueAtTime(peakGain, bgmAudioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.0005, bgmAudioCtx.currentTime + 0.28);
-                    osc.connect(gain);
-                    gain.connect(audioMasterGain || bgmAudioCtx.destination);
-                    osc.start(); osc.stop(bgmAudioCtx.currentTime + 0.28);
-                    index = (index + 1) % xmasMelody.length;
-                } catch(e) {}
+                if (!isBgmPlaying || !bgmAudioCtx) return;
+                if (bgmAudioCtx.state === 'suspended') {
+                    bgmAudioCtx.resume().catch(() => {});
+                }
+                playBgmNote(xmasMelody[index], 0.28);
+                index = (index + 1) % xmasMelody.length;
             }, 320);
         }
 
@@ -1120,7 +1133,7 @@
                         const gain = bgmAudioCtx.createGain();
                         osc.type = waveType;
                         osc.frequency.value = freq;
-                        const gVal = isAndroidDevice ? Math.min(0.45, baseGain * 1.8) : baseGain;
+                        const gVal = isAndroidDevice ? Math.min(0.75, baseGain * 2.8) : Math.min(0.45, baseGain * 1.4);
                         gain.gain.setValueAtTime(gVal, bgmAudioCtx.currentTime);
                         gain.gain.exponentialRampToValueAtTime(0.001, bgmAudioCtx.currentTime + durSec);
                         osc.connect(gain);
@@ -1132,7 +1145,7 @@
         }
 
         function playArcadeChime() {
-            playToneSequence([440, 554.37, 659.25, 880], 'square', 0.12, 80, 0.15);
+            playToneSequence([440, 554.37, 659.25, 880], 'square', 0.16, 80, 0.15);
         }
 
         function playHitSound() {
@@ -1144,7 +1157,7 @@
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(300, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.12);
-                const gVal = isAndroidDevice ? 0.32 : 0.18;
+                const gVal = isAndroidDevice ? 0.65 : 0.28;
                 gain.gain.setValueAtTime(gVal, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
                 osc.connect(gain);
@@ -1162,7 +1175,7 @@
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(180, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.25);
-                const gVal = isAndroidDevice ? 0.24 : 0.14;
+                const gVal = isAndroidDevice ? 0.55 : 0.22;
                 gain.gain.setValueAtTime(gVal, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
                 osc.connect(gain);
@@ -1172,11 +1185,20 @@
         }
 
         function playGameOverSound() {
-            playToneSequence([330, 311, 294, 277, 246], 'square', 0.16, 180, 0.25);
+            playToneSequence([330, 311, 294, 277, 246], 'square', 0.2, 180, 0.25);
         }
 
         function playUnlockFanfare() {
-            playToneSequence([523.25, 659.25, 783.99, 1046.50], 'triangle', 0.22, 120, 0.35);
+            playToneSequence([523.25, 659.25, 783.99, 1046.50], 'triangle', 0.28, 120, 0.35);
+        }
+
+        function playMenuSelectSound() {
+            playToneSequence([660, 880], 'square', 0.14, 55, 0.09);
+        }
+
+        function playPageStepSound(forward = true) {
+            const notes = forward ? [440, 587.33, 783.99] : [659.25, 493.88, 392.00];
+            playToneSequence(notes, 'triangle', 0.22, 65, 0.14);
         }
 
         // GESTION DE LA PRÉVISUALISATION MODALE
@@ -1669,11 +1691,13 @@
         }
 
         function toggleParentPanel() {
+            playMenuSelectSound();
             const panel = document.getElementById('parentPanel');
             panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
         }
 
         function filterGifts(type, btn) {
+            if (btn) playMenuSelectSound();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             renderGifts(type);
@@ -1700,6 +1724,7 @@
         const totalLetterSlides = 4;
 
         function changeLetterSlide(direction) {
+            playMenuSelectSound();
             document.getElementById(`slide-${currentLetterSlide}`).classList.remove('active-slide');
             currentLetterSlide += direction;
             if (currentLetterSlide > totalLetterSlides) currentLetterSlide = 1;
