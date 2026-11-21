@@ -517,7 +517,49 @@
             100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; }
         }
 
-        @media(max-width: 600px) { .pixel-title { font-size: 1.4rem; } .arcade-cabinet-master-screen { min-height: 600px; padding: 15px; } }
+        @media(max-width: 600px) {
+            body { padding: 10px; }
+            .pixel-title { font-size: 1.25rem; }
+            .arcade-cabinet-master-screen {
+                min-height: auto;
+                height: auto;
+                padding: 14px;
+                overflow: visible;
+            }
+            .arcade-page {
+                height: auto;
+                flex-grow: 0;
+                justify-content: flex-start;
+                gap: 12px;
+            }
+            .arcade-page.active {
+                display: flex;
+            }
+            .parchment-screen-view {
+                padding: 14px 12px;
+                flex-grow: 0;
+            }
+            .letter-slide {
+                font-size: 0.48rem;
+                line-height: 1.9;
+            }
+            .grid {
+                grid-template-columns: 1fr;
+                max-height: none;
+                overflow-y: visible;
+                padding-right: 0;
+            }
+            .card {
+                min-height: auto;
+            }
+            .filters {
+                gap: 5px;
+            }
+            .filter-btn {
+                font-size: 0.7rem;
+                padding: 6px 9px;
+            }
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
@@ -631,7 +673,7 @@
                     — MARTY 🎮🎄✨
                 </div>
                 <!-- Slide 4 : Liste Miniature des Cadeaux de Marty avec Grands Visuels -->
-                <div class="letter-slide" id="slide-4" style="text-align: left; height: 100%; overflow-y: auto; max-height: 230px; padding-right: 5px;">
+                <div class="letter-slide" id="slide-4" style="text-align: left; overflow-y: auto; max-height: 360px; padding-right: 5px;">
                     <div style="font-family: 'Press Start 2P', monospace; font-size: 0.5rem; margin-bottom: 10px; color: var(--parchment-border); text-align: center;">🎁 MA LISTE DE RÊVE (AVEC LES GRANDS VISUELS) :</div>
                     <div id="letterMiniListContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
