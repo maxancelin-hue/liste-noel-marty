@@ -387,8 +387,9 @@
 
         /* STYLE BOOMER 2000 */
         .boomer-body { background-color: #000000 !important; background-image: none !important; color: #00FF00 !important; font-family: "Times New Roman", Times, serif !important; padding: 10px; }
-        .boomer-container { border: 4px ridge #FF00FF; background-color: #000080; color: #FFFFFF; padding: 15px; max-width: 900px; margin: 0 auto; }
-        .boomer-table { width: 100%; border-collapse: collapse; border: 3px inset #C0C0C0; background-color: #FFFFFF; color: #000000; margin-top: 10px; }
+        .boomer-container { border: 4px ridge #FF00FF; background-color: #000080; color: #FFFFFF; padding: 15px; max-width: 900px; width: 100%; margin: 0 auto; }
+        .boomer-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
+        .boomer-table { width: 100%; min-width: 560px; border-collapse: collapse; border: 3px inset #C0C0C0; background-color: #FFFFFF; color: #000000; }
         .boomer-table th { background-color: #C0C0C0; color: #000080; border: 2px outset #C0C0C0; padding: 6px; font-size: 0.85rem; font-family: Arial, sans-serif; }
         .boomer-table td { border: 1px solid #808080; padding: 6px; font-size: 0.8rem; font-family: Arial, sans-serif; }
         .boomer-table tr:nth-child(even) { background-color: #E0E0E0; }
@@ -559,6 +560,20 @@
                 font-size: 0.7rem;
                 padding: 6px 9px;
             }
+            .boomer-container {
+                padding: 10px 8px;
+                max-height: 78vh;
+            }
+            .boomer-table {
+                min-width: 480px;
+            }
+            .boomer-table th, .boomer-table td {
+                padding: 4px 5px;
+                font-size: 0.7rem;
+            }
+            .boomer-col-hide-mobile {
+                display: none;
+            }
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -693,9 +708,13 @@
         <!-- ================= ÉCRAN BOOMER 2000 (CHEAT CODE) ================= -->
         <div class="arcade-page" id="screen-boomer">
             <div class="boomer-container" style="max-height: 500px; overflow-y: auto;">
-                <p style="text-align: center; font-size: 0.75rem; color: #FFFF00; margin-bottom: 10px;">[Compteur de visiteurs : 0001998] &nbsp;|&nbsp; [Optimisé pour Netscape Navigator]</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <button class="boomer-btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="exitBoomerMode()">⬅️ Retour</button>
+                    <span style="font-size: 0.75rem; color: #FFFF00;">[Compteur de visiteurs : 0001998] | [Optimisé pour Netscape Navigator]</span>
+                </div>
                 <div id="boomerTableContent"></div>
-                <div style="text-align: center; margin-top: 15px;">
+                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                    <button class="boomer-btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="exitBoomerMode()">⬅️ Retour</button>
                     <button class="boomer-btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="exitBoomerMode()">« Retourner dans le vrai jeu magique</button>
                 </div>
             </div>
@@ -862,23 +881,66 @@
         }
 
         let bgmAudioCtx = null;
+        let audioMasterGain = null;
         let bgmInterval = null;
         let isBgmPlaying = false;
+        const isAndroidDevice = /Android/i.test(navigator.userAgent || '');
 
-        function initAutoBgm() {
-            if (!isBgmPlaying) {
-                toggleBgm();
-                window.removeEventListener('click', initAutoBgm);
+        function getAudioContext() {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return null;
+            if (!bgmAudioCtx) {
+                bgmAudioCtx = new AudioCtx();
+                const compressor = bgmAudioCtx.createDynamicsCompressor();
+                compressor.threshold.value = -14;
+                compressor.knee.value = 18;
+                compressor.ratio.value = 6;
+                compressor.attack.value = 0.005;
+                compressor.release.value = 0.15;
+
+                audioMasterGain = bgmAudioCtx.createGain();
+                // Android Chrome tends to attenuate WebAudio oscillators; boost slightly on Android
+                audioMasterGain.gain.value = isAndroidDevice ? 2.4 : 1.0;
+
+                compressor.connect(audioMasterGain);
+                audioMasterGain.connect(bgmAudioCtx.destination);
+            }
+            if (bgmAudioCtx.state === 'suspended') {
+                bgmAudioCtx.resume().catch(() => {});
+            }
+            return bgmAudioCtx;
+        }
+
+        function connectToAudioOut(node) {
+            const ctx = getAudioContext();
+            if (!ctx) return null;
+            // Connect through compressor if available
+            node.connect(ctx.destination);
+            return ctx;
+        }
+
+        function resumeAudioOnGesture() {
+            const ctx = getAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+            if (isBgmPlaying && !bgmInterval) {
+                startBgm();
             }
         }
-        window.addEventListener('click', initAutoBgm, { once: true });
+        window.addEventListener('pointerdown', resumeAudioOnGesture, { passive: true });
+        window.addEventListener('touchstart', resumeAudioOnGesture, { passive: true });
+        window.addEventListener('click', resumeAudioOnGesture, { passive: true });
 
         window.addEventListener('DOMContentLoaded', () => {
             const snowBot = document.getElementById('snowBot');
             if (snowBot) { snowBot.style.left = '30px'; snowBot.style.top = '90px'; }
             setInterval(moveMascotsToEdge, 6500);
             updateNavigationLocks();
-            toggleBgm();
+            isBgmPlaying = true;
+            const btn = document.getElementById('bgm-toggle-btn');
+            if (btn) { btn.textContent = '🔊 Musique'; btn.classList.add('playing'); }
+            startBgm();
             renderLetterMiniList();
             initSharedReservations();
         });
@@ -949,10 +1011,11 @@
         function renderBoomerTable() {
             const container = document.getElementById('boomerTableContent');
             let html = `
+                <div class="boomer-table-wrap">
                 <table class="boomer-table">
                     <tr>
-                        <th>ID</th>
-                        <th>Aperçu</th>
+                        <th class="boomer-col-hide-mobile">ID</th>
+                        <th class="boomer-col-hide-mobile">Aperçu</th>
                         <th>Cadeau</th>
                         <th>Catégorie</th>
                         <th>Prix (CAD / EUR)</th>
@@ -969,8 +1032,8 @@
 
                 html += `
                     <tr>
-                        <td style="text-align: center;">#${gift.id}</td>
-                        <td style="text-align: center; background: #fff;">${imgCol}</td>
+                        <td class="boomer-col-hide-mobile" style="text-align: center;">#${gift.id}</td>
+                        <td class="boomer-col-hide-mobile" style="text-align: center; background: #fff;">${imgCol}</td>
                         <td><strong>${gift.title}</strong><br><small>${gift.desc}</small></td>
                         <td>${gift.category}</td>
                         <td>${gift.priceDisplay}</td>
@@ -982,7 +1045,7 @@
                     </tr>
                 `;
             });
-            html += `</table>`;
+            html += `</table></div>`;
             container.innerHTML = html;
         }
 
@@ -996,26 +1059,25 @@
             renderGifts('all');
         }
 
-        // AUDIO & EFFETS SONORES
+        // AUDIO & EFFETS SONORES (optimisé Android / iOS / PC)
         function toggleBgm() {
             const btn = document.getElementById('bgm-toggle-btn');
+            const ctx = getAudioContext();
             if (!isBgmPlaying) {
                 isBgmPlaying = true;
+                if (ctx && ctx.state === 'suspended') { ctx.resume().catch(() => {}); }
                 startBgm();
-                btn.textContent = '🔊 Musique';
-                btn.classList.add('playing');
+                if (btn) { btn.textContent = '🔊 Musique'; btn.classList.add('playing'); }
             } else {
                 isBgmPlaying = false;
                 stopBgm();
-                btn.textContent = '🔇 Musique';
-                btn.classList.remove('playing');
+                if (btn) { btn.textContent = '🔇 Musique'; btn.classList.remove('playing'); }
             }
         }
 
         function startBgm() {
-            if (!bgmAudioCtx) { bgmAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-            if (bgmAudioCtx.state === 'suspended') { bgmAudioCtx.resume(); }
-            if (bgmInterval) return;
+            const ctx = getAudioContext();
+            if (!ctx || bgmInterval) return;
 
             const xmasMelody = [
                 329.63, 329.63, 329.63, 329.63, 329.63, 329.63,  
@@ -1026,15 +1088,17 @@
             let index = 0;
 
             bgmInterval = setInterval(() => {
-                if (!isBgmPlaying || !bgmAudioCtx) return;
+                if (!isBgmPlaying || !bgmAudioCtx || bgmAudioCtx.state !== 'running') return;
                 try {
                     const osc = bgmAudioCtx.createOscillator();
                     const gain = bgmAudioCtx.createGain();
                     osc.type = 'triangle';
                     osc.frequency.value = xmasMelody[index];
-                    gain.gain.setValueAtTime(0.012, bgmAudioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, bgmAudioCtx.currentTime + 0.28);
-                    osc.connect(gain); gain.connect(bgmAudioCtx.destination);
+                    const peakGain = isAndroidDevice ? 0.065 : 0.028;
+                    gain.gain.setValueAtTime(peakGain, bgmAudioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0005, bgmAudioCtx.currentTime + 0.28);
+                    osc.connect(gain);
+                    gain.connect(audioMasterGain || bgmAudioCtx.destination);
                     osc.start(); osc.stop(bgmAudioCtx.currentTime + 0.28);
                     index = (index + 1) % xmasMelody.length;
                 } catch(e) {}
@@ -1045,91 +1109,74 @@
             if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
         }
 
-        function playArcadeChime() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [440, 554.37, 659.25, 880];
-                notes.forEach((freq, index) => {
-                    setTimeout(() => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'square';
+        function playToneSequence(notes, waveType, baseGain, stepMs, durSec) {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            notes.forEach((freq, index) => {
+                setTimeout(() => {
+                    if (!bgmAudioCtx) return;
+                    try {
+                        const osc = bgmAudioCtx.createOscillator();
+                        const gain = bgmAudioCtx.createGain();
+                        osc.type = waveType;
                         osc.frequency.value = freq;
-                        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-                        osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-                    }, index * 80);
-                });
-            } catch(e) {}
+                        const gVal = isAndroidDevice ? Math.min(0.45, baseGain * 1.8) : baseGain;
+                        gain.gain.setValueAtTime(gVal, bgmAudioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, bgmAudioCtx.currentTime + durSec);
+                        osc.connect(gain);
+                        gain.connect(audioMasterGain || bgmAudioCtx.destination);
+                        osc.start(); osc.stop(bgmAudioCtx.currentTime + durSec);
+                    } catch(e) {}
+                }, index * stepMs);
+            });
+        }
+
+        function playArcadeChime() {
+            playToneSequence([440, 554.37, 659.25, 880], 'square', 0.12, 80, 0.15);
         }
 
         function playHitSound() {
+            const ctx = getAudioContext();
+            if (!ctx) return;
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.12);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+                osc.frequency.setValueAtTime(300, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.12);
+                const gVal = isAndroidDevice ? 0.32 : 0.18;
+                gain.gain.setValueAtTime(gVal, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(audioMasterGain || ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.12);
             } catch(e) {}
         }
 
         function playNegationSound() {
+            const ctx = getAudioContext();
+            if (!ctx) return;
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(90, audioCtx.currentTime + 0.25);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+                osc.frequency.setValueAtTime(180, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.25);
+                const gVal = isAndroidDevice ? 0.24 : 0.14;
+                gain.gain.setValueAtTime(gVal, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(audioMasterGain || ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.25);
             } catch(e) {}
         }
 
         function playGameOverSound() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [330, 311, 294, 277, 246];
-                notes.forEach((freq, index) => {
-                    setTimeout(() => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'square';
-                        osc.frequency.value = freq;
-                        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-                        osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.start(); osc.stop(audioCtx.currentTime + 0.25);
-                    }, index * 180);
-                });
-            } catch(e) {}
+            playToneSequence([330, 311, 294, 277, 246], 'square', 0.16, 180, 0.25);
         }
 
         function playUnlockFanfare() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const fanfareNotes = [523.25, 659.25, 783.99, 1046.50];
-                fanfareNotes.forEach((freq, index) => {
-                    setTimeout(() => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.value = freq;
-                        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-                        osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.start(); osc.stop(audioCtx.currentTime + 0.35);
-                    }, index * 120);
-                });
-            } catch(e) {}
+            playToneSequence([523.25, 659.25, 783.99, 1046.50], 'triangle', 0.22, 120, 0.35);
         }
 
         // GESTION DE LA PRÉVISUALISATION MODALE
